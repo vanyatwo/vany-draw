@@ -68,10 +68,7 @@ export default function Page({ id }: PageProps) {
   async function setSceneData() {
     if (excalidrawAPI) {
       const scene = excalidrawAPI.getSceneElements();
-      const state = excalidrawAPI.getAppState();
       const updatedAt = new Date().toISOString();
-
-      console.log(state);
 
       // Save locally first
       drawDataStore.getState().setPageData(id, scene, updatedAt, name);
@@ -89,6 +86,7 @@ export default function Page({ id }: PageProps) {
     if (!isLoading && data?.data && excalidrawAPI) {
       setTimeout(updateScene, 10);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoading, data, excalidrawAPI]);
 
   useEffect(() => {

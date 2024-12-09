@@ -8,7 +8,7 @@ import pluginQuery from "@tanstack/eslint-plugin-query";
 import eslintConfigPrettier from "eslint-config-prettier";
 
 export default tseslint.config(
-  { ignores: ["dist"] },
+  { ignores: ["dist", "src/components/ui/**"] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],
@@ -26,6 +26,7 @@ export default tseslint.config(
         "warn",
         { allowConstantExport: true },
       ],
+      "no-console": ["error", { allow: ["error"] }],
     },
   },
   pluginQuery.configs["flat/recommended"],
