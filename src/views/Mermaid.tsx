@@ -58,7 +58,8 @@ export default function Mermaid() {
 
   async function handleSaveAsNewPage() {
     const elements = excalidrawAPI?.getSceneElements();
-    const data = await createNewPage(elements);
+    const files = excalidrawAPI?.getFiles();
+    const data = await createNewPage(elements, files);
 
     if (data.data && data.data[0]?.page_id) {
       goToPage(data.data[0].page_id);

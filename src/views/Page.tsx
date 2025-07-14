@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Excalidraw, WelcomeScreen } from "@excalidraw/excalidraw";
 import { NonDeletedExcalidrawElement } from "@excalidraw/excalidraw/element/types";
-import { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
+import { ExcalidrawImperativeAPI, BinaryFiles } from "@excalidraw/excalidraw/types";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { RefreshCcw } from "lucide-react";
 import { getDrawData, setDrawData } from "@/db/draw";
@@ -38,7 +38,8 @@ export default function Page({ id }: PageProps) {
     mutationFn: (data: {
       elements: NonDeletedExcalidrawElement[];
       name: string;
-    }) => setDrawData(id, data.elements, data.name),
+      files?: BinaryFiles;
+    }) => setDrawData(id, data.elements, data.name, data.files),
     onSuccess: () => {
       setIsSaving(false);
     },
@@ -54,11 +55,20 @@ export default function Page({ id }: PageProps) {
 
   async function updateScene() {
     if (data?.data && excalidrawAPI) {
-      const elements = data.data[0].page_elements.elements;
+      const pageData = data.data[0].page_elements;
+      const elements = pageData.elements || [];
+      const files = pageData.files || {};
+      
       excalidrawAPI.updateScene({
         elements: elements,
         appState: { theme: theme },
       });
+      
+      // Update files if they exist
+      if (Object.keys(files).length > 0) {
+        excalidrawAPI.addFiles(Object.values(files));
+      }
+      
       setName(data.data[0].name);
     }
     if (data?.error) {
@@ -69,20 +79,23 @@ export default function Page({ id }: PageProps) {
   const setSceneData = useCallback(async () => {
     if (excalidrawAPI) {
       const scene = excalidrawAPI.getSceneElements();
+      const files = excalidrawAPI.getFiles();
       const updatedAt = new Date().toISOString();
 
       const existingData = drawDataStore.getState().getPageData(id);
 
-      if (JSON.stringify(existingData?.elements) !== JSON.stringify(scene)) {
+      if (JSON.stringify(existingData?.elements) !== JSON.stringify(scene) ||
+          JSON.stringify(existingData?.files) !== JSON.stringify(files)) {
         setIsSaving(true);
         // Save locally first
-        drawDataStore.getState().setPageData(id, scene, updatedAt, name);
+        drawDataStore.getState().setPageData(id, scene, updatedAt, name, files);
 
         // Then push to API
         mutate(
           {
             elements: scene as NonDeletedExcalidrawElement[],
             name,
+            files,
           },
           {
             onSettled() {
@@ -117,6 +130,12 @@ export default function Page({ id }: PageProps) {
         elements: localData.elements,
         appState: { theme: theme },
       });
+      
+      // Load files if they exist
+      if (localData.files && Object.keys(localData.files).length > 0) {
+        excalidrawAPI.addFiles(Object.values(localData.files));
+      }
+      
       setName(localData.name);
     }
   }, [id, excalidrawAPI, theme]);
