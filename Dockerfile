@@ -1,30 +1,23 @@
 # ---------- Build ----------
 FROM oven/bun:1.1.42 AS build
-
 WORKDIR /app
 
-# Лучше копировать lock-файл, если есть
-COPY package.json bun.lock* ./
-
-RUN bun install --frozen-lockfile
+# Копируем только package.json (без старого bun.lock)
+COPY package.json ./
+RUN bun install
 
 COPY . .
 
-# 1) Генерим роуты один раз
-RUN bunx tanstack-router generate
-
-# 2) Отключаем автогенерацию на время билда
-ENV TANSTACK_DISABLE_GENERATION=1
-RUN bun run build
+# Генерим маршруты и билдим
+RUN bunx tanstack-router generate && TANSTACK_DISABLE_GENERATION=1 bun run build
 
 # ---------- Run ----------
 FROM oven/bun:1.1.42 AS run
-
 WORKDIR /app
 
-# Копируем только то, что нужно на прод
-COPY package.json bun.lock* ./
-RUN bun install --production --frozen-lockfile
+COPY package.json ./
+# Прод зависимости без frozen (или вообще не ставим, если server.ts почти ничего не тянет)
+RUN bun install --production --no-save
 
 COPY --from=build /app/dist ./dist
 COPY server.ts ./
