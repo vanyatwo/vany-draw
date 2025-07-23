@@ -1,25 +1,33 @@
-FROM oven/bun:1.1.42 AS build-stage
+# ---------- Build ----------
+FROM oven/bun:1.1.42 AS build
 
 WORKDIR /app
 
-COPY package.json ./
+# Лучше копировать lock-файл, если есть
+COPY package.json bun.lock* ./
 
-RUN bun install
+RUN bun install --frozen-lockfile
 
 COPY . .
 
+# 1) Генерим роуты один раз
+RUN bunx tanstack-router generate
+
+# 2) Отключаем автогенерацию на время билда
+ENV TANSTACK_DISABLE_GENERATION=1
 RUN bun run build
 
-FROM oven/bun:1.1.42 AS serve-stage
+# ---------- Run ----------
+FROM oven/bun:1.1.42 AS run
 
 WORKDIR /app
 
-RUN bun install bun hono zod
+# Копируем только то, что нужно на прод
+COPY package.json bun.lock* ./
+RUN bun install --production --frozen-lockfile
 
-COPY --from=build-stage /app/dist ./dist
-
-COPY server.ts /app
+COPY --from=build /app/dist ./dist
+COPY server.ts ./
 
 EXPOSE 3729
-
 CMD ["bun", "run", "server.ts"]
